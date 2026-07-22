@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<!-- BUILD_VERSION 1.1.0 -->
+<!-- BUILD_VERSION 1.2.0 -->
 <!-- Conklin Live Translator — English speech -> French + Spanish, for training sessions -->
+<!-- 1.2.0: fully responsive on any device/orientation - portrait stacking, fluid type that
+     scales with screen size, safe-area support for notched phones, per-browser guidance
+     when speech recognition is unavailable -->
 <!-- 1.1.0: rolling live translation while speaking (Meet-style), build number shown under title -->
 <!-- Deploy on HTTPS (GitHub Pages). Microphone will NOT work over plain http or inside a chat preview iframe. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Conklin Live Translator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,7 +24,11 @@
     --es:#E8A25C;   /* Spanish channel — amber */
     --mic:#8FCF9B;  /* live mic — green */
     --err:#E87070;
-    --phrase-size:40px;
+    /* Fluid type: base size follows the screen (5vmin), clamped so it never
+       gets silly on a phone or a 4K TV, then multiplied by the user's A+/A- scale. */
+    --phrase-scale:1;
+    --phrase-size:calc(clamp(24px, 5vmin, 58px) * var(--phrase-scale));
+    --ui-size:clamp(14px, 2.2vmin, 18px);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -33,12 +40,17 @@
     height:100vh;height:100dvh;
     overflow:hidden;
     -webkit-user-select:none;user-select:none;
+    /* keep content clear of notches / rounded corners on phones */
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
   }
 
   /* ---------- top bar ---------- */
   header{
-    display:flex;align-items:center;gap:14px;
-    padding:8px 18px;
+    display:flex;align-items:center;gap:10px;
+    flex-wrap:wrap;
+    padding:8px 14px;
+    padding-top:calc(8px + env(safe-area-inset-top));
     border-bottom:1px solid var(--line);
     background:var(--panel);
     flex:0 0 auto;
@@ -46,19 +58,19 @@
   .brand-block{display:flex;flex-direction:column;gap:1px}
   .brand{
     font-family:'Barlow Condensed',sans-serif;
-    font-weight:600;font-size:20px;letter-spacing:.12em;
+    font-weight:600;font-size:clamp(16px, 2.6vmin, 20px);letter-spacing:.12em;
     text-transform:uppercase;color:var(--dim);
     white-space:nowrap;
   }
   .brand b{color:var(--text);font-weight:600}
   .build{
     font-family:'Barlow Condensed',sans-serif;
-    font-size:12px;letter-spacing:.14em;color:var(--dim);
+    font-size:clamp(10px, 1.6vmin, 12px);letter-spacing:.14em;color:var(--dim);
     text-transform:uppercase;
   }
   #status{
     font-family:'Barlow Condensed',sans-serif;
-    font-size:16px;letter-spacing:.1em;text-transform:uppercase;
+    font-size:clamp(13px, 2vmin, 16px);letter-spacing:.1em;text-transform:uppercase;
     color:var(--dim);white-space:nowrap;
   }
   #status.live{color:var(--mic)}
@@ -66,15 +78,16 @@
   .spacer{flex:1}
   button{
     font-family:'Barlow Condensed',sans-serif;
-    font-size:18px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    font-size:var(--ui-size);font-weight:600;letter-spacing:.08em;text-transform:uppercase;
     background:none;border:1px solid var(--line);color:var(--text);
-    border-radius:6px;padding:10px 18px;cursor:pointer;
+    border-radius:6px;padding:9px 14px;cursor:pointer;
+    min-height:42px; /* comfortable tap target on touch devices */
     touch-action:manipulation;
   }
   button:focus-visible{outline:2px solid var(--mic);outline-offset:2px}
-  #toggle{border-color:var(--mic);color:var(--mic);min-width:130px}
+  #toggle{border-color:var(--mic);color:var(--mic);min-width:clamp(90px, 16vmin, 130px)}
   #toggle.on{background:var(--mic);color:#14181C}
-  .size-btn{min-width:52px;font-size:20px;padding:8px 0}
+  .size-btn{min-width:48px;padding:8px 0;font-size:calc(var(--ui-size) + 2px)}
 
   /* ---------- translation columns ---------- */
   main{
@@ -87,17 +100,17 @@
   .col + .col{border-left:1px solid var(--line)}
   .col-head{
     flex:0 0 auto;
-    display:flex;align-items:baseline;gap:12px;
-    padding:14px 22px 10px;
+    display:flex;align-items:baseline;gap:10px;
+    padding:10px 18px 8px;
     border-bottom:1px solid var(--line);
   }
   .col-head .code{
     font-family:'Barlow Condensed',sans-serif;
-    font-weight:600;font-size:26px;letter-spacing:.14em;
+    font-weight:600;font-size:clamp(18px, 3.2vmin, 26px);letter-spacing:.14em;
   }
   .col-head .lang{
     font-family:'Barlow Condensed',sans-serif;
-    font-weight:500;font-size:18px;letter-spacing:.1em;
+    font-weight:500;font-size:clamp(13px, 2.2vmin, 18px);letter-spacing:.1em;
     text-transform:uppercase;color:var(--dim);
   }
   #col-fr .code{color:var(--fr)}
@@ -105,14 +118,14 @@
   .feed{
     flex:1 1 auto;min-height:0;
     overflow-y:auto;
-    padding:18px 22px 26px;
+    padding:12px 18px 20px;
     scroll-behavior:smooth;
   }
   .phrase{
     font-size:var(--phrase-size);
     line-height:1.3;font-weight:500;
     color:var(--dim);
-    padding:8px 0 8px 16px;
+    padding:6px 0 6px 14px;
     border-left:3px solid transparent;
     transition:color .4s;
   }
@@ -126,29 +139,29 @@
     font-size:var(--phrase-size);
     line-height:1.3;font-weight:500;
     color:var(--text);opacity:.8;
-    padding:8px 0 8px 16px;
+    padding:6px 0 6px 14px;
     border-left:3px dashed var(--line);
-    min-height:calc(var(--phrase-size)*1.3 + 16px);
   }
   .live-line:empty{display:none}
   #col-fr .live-line{border-left-color:var(--fr)}
   #col-es .live-line{border-left-color:var(--es)}
 
   .empty-hint{
-    color:var(--dim);font-size:20px;padding:8px 0 8px 16px;
+    color:var(--dim);font-size:clamp(15px, 2.6vmin, 20px);padding:6px 0 6px 14px;
   }
 
   /* ---------- live English caption bar ---------- */
   footer{
     flex:0 0 auto;
-    display:flex;align-items:center;gap:16px;
-    padding:14px 22px;
+    display:flex;align-items:center;gap:12px;
+    padding:10px 18px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
     background:var(--panel);
     border-top:1px solid var(--line);
-    min-height:64px;
+    min-height:52px;
   }
   .mic-dot{
-    flex:0 0 auto;width:14px;height:14px;border-radius:50%;
+    flex:0 0 auto;width:13px;height:13px;border-radius:50%;
     background:var(--line);
   }
   .mic-dot.live{background:var(--mic);animation:pulse 1.2s ease-in-out infinite}
@@ -158,13 +171,23 @@
   }
   @media (prefers-reduced-motion:reduce){.mic-dot.live{animation:none}}
   #caption{
-    font-size:24px;line-height:1.3;color:var(--dim);
+    font-size:clamp(15px, 2.8vmin, 24px);line-height:1.3;color:var(--dim);
     overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
   }
   #caption.talking{color:var(--text)}
 
-  @media (max-width:820px){ /* iPad portrait */
-    :root{--phrase-size:30px}
+  /* ---------- portrait: stack the languages top / bottom ---------- */
+  @media (orientation:portrait){
+    main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+    .col + .col{border-left:none;border-top:1px solid var(--line)}
+  }
+
+  /* very narrow screens: tighten the header so controls stay on one row */
+  @media (max-width:480px){
+    header{gap:8px;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top))}
+    #status{display:none} /* mic dot + button state already show it */
+    button{padding:8px 10px}
+    #clear{min-width:0}
   }
 </style>
 </head>
@@ -207,7 +230,7 @@
 
 <script>
 "use strict";
-const BUILD_VERSION = "1.1.0";
+const BUILD_VERSION = "1.2.0";
 document.getElementById("build").textContent = "Build " + BUILD_VERSION;
 
 const $ = id => document.getElementById(id);
@@ -217,17 +240,17 @@ const statusEl=$("status"), toggleBtn=$("toggle"), caption=$("caption"),
 
 let running=false, recognition=null, restartTimer=null;
 
-/* ---------- text size (persisted where allowed) ---------- */
-let phraseSize = 40;
-try{ phraseSize = parseInt(localStorage.getItem("clt_size")) || 40; }catch(e){}
-applySize();
-function applySize(){
-  phraseSize = Math.min(84, Math.max(22, phraseSize));
-  document.documentElement.style.setProperty("--phrase-size", phraseSize+"px");
-  try{ localStorage.setItem("clt_size", phraseSize); }catch(e){}
+/* ---------- text scale (multiplier on the fluid base size) ---------- */
+let phraseScale = 1;
+try{ phraseScale = parseFloat(localStorage.getItem("clt_scale")) || 1; }catch(e){}
+applyScale();
+function applyScale(){
+  phraseScale = Math.min(1.8, Math.max(0.55, phraseScale));
+  document.documentElement.style.setProperty("--phrase-scale", phraseScale);
+  try{ localStorage.setItem("clt_scale", phraseScale); }catch(e){}
 }
-$("bigger").onclick = ()=>{ phraseSize+=6; applySize(); };
-$("smaller").onclick = ()=>{ phraseSize-=6; applySize(); };
+$("bigger").onclick = ()=>{ phraseScale += 0.12; applyScale(); };
+$("smaller").onclick = ()=>{ phraseScale -= 0.12; applyScale(); };
 
 $("clear").onclick = ()=>{
   feedFR.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove());
@@ -273,8 +296,8 @@ function addPhrase(feed, liveEl, text, cls){
   div.className = "phrase locked-last" + (cls ? " "+cls : "");
   div.textContent = text;
   feed.insertBefore(div, liveEl);           // live line always stays last
-  const old = feed.querySelectorAll(".phrase");
-  while(old.length > 40 && feed.firstChild !== liveEl){ feed.removeChild(feed.firstChild); break; }
+  const phrases = feed.querySelectorAll(".phrase");
+  if(phrases.length > 40) phrases[0].remove(); // keep it light
   feed.scrollTop = feed.scrollHeight;
   return div;
 }
@@ -378,13 +401,13 @@ function buildRecognizer(){
     if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){
       stopAll();
       setStatus("Mic blocked", "err");
-      caption.textContent = "Microphone access was denied. Allow the mic in browser settings (on iPad: also check Settings → Siri & Search → Enable Dictation), then tap Start again.";
+      caption.textContent = "Microphone access was denied. Allow the mic in browser settings (on iPhone/iPad: also check Settings → Siri & Search → Enable Dictation), then tap Start again.";
     }
     // "no-speech" and "aborted" are routine — the restart logic handles them.
   };
 
   rec.onend = ()=>{
-    // Safari/Chrome stop recognition periodically; restart while running.
+    // Browsers stop recognition periodically; restart while running.
     if(running){
       clearTimeout(restartTimer);
       restartTimer = setTimeout(()=>{ try{ rec.start(); }catch(e){} }, 250);
@@ -417,10 +440,20 @@ function stopAll(){
   caption.textContent = "Tap Start, then speak in English.";
 }
 
+/* ---------- browser support guidance ---------- */
 if(!SR){
   toggleBtn.disabled = true;
   setStatus("Not supported", "err");
-  caption.textContent = "This browser has no speech recognition. Use Safari on iPad, or Chrome / Edge on the display PC.";
+  const ua = navigator.userAgent;
+  let advice;
+  if(/Firefox/i.test(ua)){
+    advice = "Firefox doesn't support speech recognition. Open this page in Chrome or Edge instead (Safari on Apple devices).";
+  }else if(/Linux/i.test(ua) && /Chromium/i.test(ua)){
+    advice = "This Chromium build lacks Google's speech service. Install official Google Chrome and open the page there.";
+  }else{
+    advice = "This browser has no speech recognition. Open this page in Chrome or Edge (Safari on Apple devices).";
+  }
+  caption.textContent = advice;
 }else{
   toggleBtn.onclick = ()=> running ? stopAll() : startAll();
 }
