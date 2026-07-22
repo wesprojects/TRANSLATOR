@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<!-- BUILD_VERSION 1.2.0 -->
+<!-- BUILD_VERSION 2026-07-22.1 -->
 <!-- Conklin Live Translator — English speech -> French + Spanish, for training sessions -->
-<!-- 1.2.0: fully responsive on any device/orientation - portrait stacking, fluid type that
-     scales with screen size, safe-area support for notched phones, per-browser guidance
-     when speech recognition is unavailable -->
-<!-- 1.1.0: rolling live translation while speaking (Meet-style), build number shown under title -->
+<!-- 2026-07-22.1: header matched to the CNC generator framework - title / subtitle / build line
+     on the left in YYYY-MM-DD.BUILD format, Conklin logo + CONKLIN PRODUCT DEVELOPMENT on the
+     right. Logo loads from conklin-logo.png next to this file (falls back to a text wordmark
+     if the image is missing). -->
+<!-- 1.3.0: reviewable English transcript panel above the live caption bar -->
+<!-- 1.2.0: fully responsive on any device/orientation -->
+<!-- 1.1.0: rolling live translation while speaking (Meet-style) -->
 <!-- Deploy on HTTPS (GitHub Pages). Microphone will NOT work over plain http or inside a chat preview iframe. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Conklin Live Translator</title>
+<title>LIVE VOICE TRANSLATOR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#14181C;
@@ -22,13 +25,13 @@
     --dim:#8B949E;
     --fr:#7FB4E8;   /* French channel — blue  */
     --es:#E8A25C;   /* Spanish channel — amber */
-    --mic:#8FCF9B;  /* live mic — green */
+    --mic:#8FCF9B;  /* live mic / English — green */
     --err:#E87070;
-    /* Fluid type: base size follows the screen (5vmin), clamped so it never
-       gets silly on a phone or a 4K TV, then multiplied by the user's A+/A- scale. */
     --phrase-scale:1;
     --phrase-size:calc(clamp(24px, 5vmin, 58px) * var(--phrase-scale));
+    --en-size:calc(clamp(17px, 3vmin, 30px) * var(--phrase-scale));
     --ui-size:clamp(14px, 2.2vmin, 18px);
+    --mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -40,34 +43,37 @@
     height:100vh;height:100dvh;
     overflow:hidden;
     -webkit-user-select:none;user-select:none;
-    /* keep content clear of notches / rounded corners on phones */
     padding-left:env(safe-area-inset-left);
     padding-right:env(safe-area-inset-right);
   }
 
-  /* ---------- top bar ---------- */
+  /* ---------- top bar : CNC-generator framework ---------- */
   header{
-    display:flex;align-items:center;gap:10px;
-    flex-wrap:wrap;
-    padding:8px 14px;
+    display:flex;align-items:center;gap:14px;
+    padding:8px 16px;
     padding-top:calc(8px + env(safe-area-inset-top));
     border-bottom:1px solid var(--line);
-    background:var(--panel);
+    background:#0B0D0F;
     flex:0 0 auto;
   }
-  .brand-block{display:flex;flex-direction:column;gap:1px}
-  .brand{
-    font-family:'Barlow Condensed',sans-serif;
-    font-weight:600;font-size:clamp(16px, 2.6vmin, 20px);letter-spacing:.12em;
-    text-transform:uppercase;color:var(--dim);
-    white-space:nowrap;
+  .brand-block{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .app-title{
+    font-weight:700;font-size:clamp(15px, 2.8vmin, 22px);
+    letter-spacing:.02em;color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .brand b{color:var(--text);font-weight:600}
+  .app-sub{
+    font-family:var(--mono);
+    font-size:clamp(10px, 1.9vmin, 13px);letter-spacing:.08em;
+    color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
   .build{
-    font-family:'Barlow Condensed',sans-serif;
-    font-size:clamp(10px, 1.6vmin, 12px);letter-spacing:.14em;color:var(--dim);
-    text-transform:uppercase;
+    font-family:var(--mono);
+    font-size:clamp(9px, 1.6vmin, 11px);letter-spacing:.06em;
+    color:#5A6470;
   }
+  .spacer{flex:1}
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   #status{
     font-family:'Barlow Condensed',sans-serif;
     font-size:clamp(13px, 2vmin, 16px);letter-spacing:.1em;text-transform:uppercase;
@@ -75,19 +81,41 @@
   }
   #status.live{color:var(--mic)}
   #status.err{color:var(--err)}
-  .spacer{flex:1}
   button{
     font-family:'Barlow Condensed',sans-serif;
     font-size:var(--ui-size);font-weight:600;letter-spacing:.08em;text-transform:uppercase;
     background:none;border:1px solid var(--line);color:var(--text);
     border-radius:6px;padding:9px 14px;cursor:pointer;
-    min-height:42px; /* comfortable tap target on touch devices */
+    min-height:42px;
     touch-action:manipulation;
   }
   button:focus-visible{outline:2px solid var(--mic);outline-offset:2px}
   #toggle{border-color:var(--mic);color:var(--mic);min-width:clamp(90px, 16vmin, 130px)}
   #toggle.on{background:var(--mic);color:#14181C}
   .size-btn{min-width:48px;padding:8px 0;font-size:calc(var(--ui-size) + 2px)}
+
+  /* right-side Conklin block */
+  .logo-block{
+    display:flex;flex-direction:column;align-items:flex-end;gap:3px;
+    flex:0 0 auto;
+  }
+  .logo-block img{
+    height:clamp(26px, 5vmin, 40px);width:auto;display:block;
+  }
+  .logo-wordmark{
+    display:none;
+    font-weight:700;font-size:clamp(15px, 2.8vmin, 22px);letter-spacing:.04em;
+    color:var(--text);white-space:nowrap;
+  }
+  .logo-wordmark small{
+    display:block;font-weight:600;font-size:.45em;letter-spacing:.34em;color:var(--dim);
+    text-align:right;
+  }
+  .logo-dev{
+    font-family:var(--mono);
+    font-size:clamp(8px, 1.6vmin, 11px);letter-spacing:.14em;
+    color:var(--dim);white-space:nowrap;
+  }
 
   /* ---------- translation columns ---------- */
   main{
@@ -134,7 +162,6 @@
   #col-es .phrase.locked-last{border-left-color:var(--es)}
   .phrase.failed{color:var(--err);font-size:calc(var(--phrase-size)*.6)}
 
-  /* rolling live translation line */
   .live-line{
     font-size:var(--phrase-size);
     line-height:1.3;font-weight:500;
@@ -149,6 +176,39 @@
   .empty-hint{
     color:var(--dim);font-size:clamp(15px, 2.6vmin, 20px);padding:6px 0 6px 14px;
   }
+
+  /* ---------- English transcript (what was said) ---------- */
+  #transcript{
+    flex:0 0 auto;
+    display:flex;flex-direction:column;
+    border-top:1px solid var(--line);
+    background:var(--bg);
+  }
+  #transcript .col-head{
+    padding:8px 18px 6px;
+  }
+  #transcript .code{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:600;font-size:clamp(15px, 2.6vmin, 20px);letter-spacing:.14em;
+    color:var(--mic);
+  }
+  #transcript .lang{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:500;font-size:clamp(12px, 2vmin, 15px);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim);
+  }
+  #feed-en{
+    height:clamp(80px, 16vh, 150px);
+    overflow-y:auto;
+    padding:8px 18px 12px;
+    scroll-behavior:smooth;
+  }
+  #feed-en .phrase{
+    font-size:var(--en-size);
+    padding:4px 0 4px 14px;
+  }
+  #feed-en .phrase.locked-last{border-left-color:var(--mic)}
+  #feed-en .empty-hint{font-size:clamp(13px, 2.2vmin, 16px);padding:4px 0 4px 14px}
 
   /* ---------- live English caption bar ---------- */
   footer{
@@ -180,14 +240,22 @@
   @media (orientation:portrait){
     main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
     .col + .col{border-left:none;border-top:1px solid var(--line)}
+    #feed-en{height:clamp(70px, 13vh, 120px)}
   }
 
-  /* very narrow screens: tighten the header so controls stay on one row */
+  /* narrow screens: tighten the header, drop what's redundant */
+  @media (max-width:760px){
+    .logo-block img{height:22px}
+    .logo-dev{display:none}
+  }
+  @media (max-width:560px){
+    .logo-block{display:none}
+  }
   @media (max-width:480px){
     header{gap:8px;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top))}
-    #status{display:none} /* mic dot + button state already show it */
+    #status{display:none}
     button{padding:8px 10px}
-    #clear{min-width:0}
+    .app-sub,.build{max-width:40vw}
   }
 </style>
 </head>
@@ -195,15 +263,23 @@
 
 <header>
   <div class="brand-block">
-    <div class="brand"><b>Conklin</b> Live Translator</div>
+    <div class="app-title">LIVE VOICE TRANSLATOR</div>
+    <div class="app-sub">EN → FRANÇAIS + ESPAÑOL · TRAINING · WESM</div>
     <div class="build" id="build">Build —</div>
   </div>
-  <div id="status">Idle</div>
   <div class="spacer"></div>
-  <button class="size-btn" id="smaller" aria-label="Smaller text">A−</button>
-  <button class="size-btn" id="bigger" aria-label="Larger text">A+</button>
-  <button id="clear">Clear</button>
-  <button id="toggle">Start</button>
+  <div class="controls">
+    <div id="status">Idle</div>
+    <button class="size-btn" id="smaller" aria-label="Smaller text">A−</button>
+    <button class="size-btn" id="bigger" aria-label="Larger text">A+</button>
+    <button id="clear">Clear</button>
+    <button id="toggle">Start</button>
+  </div>
+  <div class="logo-block">
+    <img id="logo-img" src="conklin-logo.png" alt="Conklin Office Furniture">
+    <div class="logo-wordmark" id="logo-wordmark">CONKLIN&trade;<small>OFFICE FURNITURE</small></div>
+    <div class="logo-dev">CONKLIN PRODUCT DEVELOPMENT</div>
+  </div>
 </header>
 
 <main>
@@ -223,6 +299,11 @@
   </section>
 </main>
 
+<section id="transcript">
+  <div class="col-head"><span class="code">EN</span><span class="lang">What you said</span></div>
+  <div id="feed-en"><div class="empty-hint">Your recognized speech appears here so you can check it.</div></div>
+</section>
+
 <footer>
   <div class="mic-dot" id="micdot"></div>
   <div id="caption">Tap Start, then speak in English.</div>
@@ -230,13 +311,21 @@
 
 <script>
 "use strict";
-const BUILD_VERSION = "1.2.0";
+const BUILD_VERSION = "2026-07-22.1";   /* format: YYYY-MM-DD.BUILD — bump every revision */
 document.getElementById("build").textContent = "Build " + BUILD_VERSION;
+
+/* Logo: expects conklin-logo.png beside this file. If it's missing, fall
+   back to a text wordmark so the header never shows a broken image.      */
+const logoImg = document.getElementById("logo-img");
+logoImg.onerror = ()=>{
+  logoImg.style.display = "none";
+  document.getElementById("logo-wordmark").style.display = "block";
+};
 
 const $ = id => document.getElementById(id);
 const statusEl=$("status"), toggleBtn=$("toggle"), caption=$("caption"),
       micdot=$("micdot"), feedFR=$("feed-fr"), feedES=$("feed-es"),
-      liveFR=$("live-fr"), liveES=$("live-es");
+      feedEN=$("feed-en"), liveFR=$("live-fr"), liveES=$("live-es");
 
 let running=false, recognition=null, restartTimer=null;
 
@@ -253,8 +342,7 @@ $("bigger").onclick = ()=>{ phraseScale += 0.12; applyScale(); };
 $("smaller").onclick = ()=>{ phraseScale -= 0.12; applyScale(); };
 
 $("clear").onclick = ()=>{
-  feedFR.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove());
-  feedES.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove());
+  [feedFR, feedES, feedEN].forEach(f=>f.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove()));
   liveFR.textContent=""; liveES.textContent="";
   caption.textContent = running ? "Listening…" : "Tap Start, then speak in English.";
   caption.classList.remove("talking");
@@ -295,18 +383,15 @@ function addPhrase(feed, liveEl, text, cls){
   const div = document.createElement("div");
   div.className = "phrase locked-last" + (cls ? " "+cls : "");
   div.textContent = text;
-  feed.insertBefore(div, liveEl);           // live line always stays last
+  if(liveEl) feed.insertBefore(div, liveEl);   // live line always stays last
+  else feed.appendChild(div);
   const phrases = feed.querySelectorAll(".phrase");
   if(phrases.length > 40) phrases[0].remove(); // keep it light
   feed.scrollTop = feed.scrollHeight;
   return div;
 }
 
-/* ---------- rolling live translation ----------
-   While the speaker talks, the interim English text is re-translated on a
-   400ms throttle. A generation counter (bumped on every finalized phrase)
-   plus a per-language sequence number makes sure a stale in-flight result
-   can never overwrite the live line after things have moved on.          */
+/* ---------- rolling live translation ---------- */
 const LIVE_THROTTLE_MS = 400;
 let liveGen = 0;
 let liveSeq = { fr:0, es:0 };
@@ -354,6 +439,7 @@ async function handleFinal(text){
   text = text.trim();
   if(!text) return;
   clearLive();
+  addPhrase(feedEN, null, text);              // English transcript — the record of what was said
   const pFR = addPhrase(feedFR, liveFR, "…");
   const pES = addPhrase(feedES, liveES, "…");
   const [fr, es] = await Promise.all([translateFinal(text,"fr"), translateFinal(text,"es")]);
