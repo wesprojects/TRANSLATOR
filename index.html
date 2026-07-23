@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<!-- BUILD_VERSION 2026-07-22.2 -->
-<!-- Conklin Live Translator — English speech -> French + Spanish, for training sessions -->
-<!-- 2026-07-22.2: Conklin logo embedded directly in this file (base64) - no external image
-     file needed, shows on any device with just this one HTML file deployed -->
-<!-- 2026-07-22.1: header matched to the CNC generator framework - title / subtitle / build line
-     on the left in YYYY-MM-DD.BUILD format, Conklin logo + CONKLIN PRODUCT DEVELOPMENT on the
-     right -->
+<!-- BUILD_VERSION 2026-07-22.3 -->
+<!-- Conklin Live Translator — English speech -> selectable languages, for training sessions -->
+<!-- 2026-07-22.3: Swahili added. Language selector bar - tap chips to choose which languages
+     show in the live view; selection persists per device. Layout auto-scales: N columns in
+     landscape / N rows in portrait, text size adjusts to the language count so it stays
+     readable. Adding a future language = one entry in the LANGUAGES array in the script. -->
+<!-- 2026-07-22.2: Conklin logo embedded directly in this file (base64) -->
+<!-- 2026-07-22.1: header matched to the CNC generator framework, YYYY-MM-DD.BUILD format -->
 <!-- 1.3.0: reviewable English transcript panel above the live caption bar -->
 <!-- 1.2.0: fully responsive on any device/orientation -->
 <!-- 1.1.0: rolling live translation while speaking (Meet-style) -->
@@ -24,12 +25,12 @@
     --line:#2A323B;
     --text:#F2F0EB;
     --dim:#8B949E;
-    --fr:#7FB4E8;   /* French channel — blue  */
-    --es:#E8A25C;   /* Spanish channel — amber */
     --mic:#8FCF9B;  /* live mic / English — green */
     --err:#E87070;
-    --phrase-scale:1;
-    --phrase-size:calc(clamp(24px, 5vmin, 58px) * var(--phrase-scale));
+    --phrase-scale:1;      /* user A+/A- */
+    --count-scale:1;       /* shrinks as more languages are shown */
+    --lang-count:2;
+    --phrase-size:calc(clamp(24px, 5vmin, 58px) * var(--phrase-scale) * var(--count-scale));
     --en-size:calc(clamp(17px, 3vmin, 30px) * var(--phrase-scale));
     --ui-size:clamp(14px, 2.2vmin, 18px);
     --mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
@@ -95,7 +96,6 @@
   #toggle.on{background:var(--mic);color:#14181C}
   .size-btn{min-width:48px;padding:8px 0;font-size:calc(var(--ui-size) + 2px)}
 
-  /* right-side Conklin block */
   .logo-block{
     display:flex;flex-direction:column;align-items:flex-end;gap:3px;
     flex:0 0 auto;
@@ -118,15 +118,46 @@
     color:var(--dim);white-space:nowrap;
   }
 
+  /* ---------- language selector bar ---------- */
+  #lang-bar{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:8px;
+    padding:8px 16px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  #lang-bar .bar-label{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:clamp(12px, 2vmin, 15px);letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim);white-space:nowrap;margin-right:4px;
+  }
+  .chip{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:clamp(14px, 2.2vmin, 17px);font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;
+    border:1px solid var(--chip, var(--line));
+    color:var(--chip, var(--dim));
+    background:none;border-radius:999px;
+    padding:7px 16px;min-height:38px;cursor:pointer;
+    white-space:nowrap;touch-action:manipulation;
+    opacity:.45;
+  }
+  .chip.on{opacity:1;background:var(--chip);color:#14181C}
+
   /* ---------- translation columns ---------- */
   main{
     flex:1 1 auto;min-height:0;
-    display:grid;grid-template-columns:1fr 1fr;
+    display:grid;
+    grid-template-columns:repeat(var(--lang-count), 1fr);
   }
   .col{
     display:flex;flex-direction:column;min-height:0;
+    border-left:1px solid var(--line);
   }
-  .col + .col{border-left:1px solid var(--line)}
+  .col:first-child,
+  .col.hidden + .col:not(.hidden){border-left:none}
+  .col.hidden{display:none}
   .col-head{
     flex:0 0 auto;
     display:flex;align-items:baseline;gap:10px;
@@ -136,14 +167,13 @@
   .col-head .code{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:600;font-size:clamp(18px, 3.2vmin, 26px);letter-spacing:.14em;
+    color:var(--accent);
   }
   .col-head .lang{
     font-family:'Barlow Condensed',sans-serif;
     font-weight:500;font-size:clamp(13px, 2.2vmin, 18px);letter-spacing:.1em;
     text-transform:uppercase;color:var(--dim);
   }
-  #col-fr .code{color:var(--fr)}
-  #col-es .code{color:var(--es)}
   .feed{
     flex:1 1 auto;min-height:0;
     overflow-y:auto;
@@ -158,9 +188,7 @@
     border-left:3px solid transparent;
     transition:color .4s;
   }
-  .phrase.locked-last{color:var(--text)}
-  #col-fr .phrase.locked-last{border-left-color:var(--fr)}
-  #col-es .phrase.locked-last{border-left-color:var(--es)}
+  .col .phrase.locked-last{color:var(--text);border-left-color:var(--accent)}
   .phrase.failed{color:var(--err);font-size:calc(var(--phrase-size)*.6)}
 
   .live-line{
@@ -168,11 +196,9 @@
     line-height:1.3;font-weight:500;
     color:var(--text);opacity:.8;
     padding:6px 0 6px 14px;
-    border-left:3px dashed var(--line);
+    border-left:3px dashed var(--accent);
   }
   .live-line:empty{display:none}
-  #col-fr .live-line{border-left-color:var(--fr)}
-  #col-es .live-line{border-left-color:var(--es)}
 
   .empty-hint{
     color:var(--dim);font-size:clamp(15px, 2.6vmin, 20px);padding:6px 0 6px 14px;
@@ -208,7 +234,7 @@
     font-size:var(--en-size);
     padding:4px 0 4px 14px;
   }
-  #feed-en .phrase.locked-last{border-left-color:var(--mic)}
+  #feed-en .phrase.locked-last{color:var(--text);border-left-color:var(--mic)}
   #feed-en .empty-hint{font-size:clamp(13px, 2.2vmin, 16px);padding:4px 0 4px 14px}
 
   /* ---------- live English caption bar ---------- */
@@ -239,12 +265,17 @@
 
   /* ---------- portrait: stack the languages top / bottom ---------- */
   @media (orientation:portrait){
-    main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
-    .col + .col{border-left:none;border-top:1px solid var(--line)}
+    main{
+      grid-template-columns:1fr;
+      grid-template-rows:repeat(var(--lang-count), 1fr);
+    }
+    .col{border-left:none;border-top:1px solid var(--line)}
+    .col:first-child,
+    .col.hidden + .col:not(.hidden){border-top:none}
     #feed-en{height:clamp(70px, 13vh, 120px)}
   }
 
-  /* narrow screens: tighten the header, drop what's redundant */
+  /* narrow screens */
   @media (max-width:760px){
     .logo-block img{height:22px}
     .logo-dev{display:none}
@@ -265,7 +296,7 @@
 <header>
   <div class="brand-block">
     <div class="app-title">LIVE VOICE TRANSLATOR</div>
-    <div class="app-sub">EN → FRANÇAIS + ESPAÑOL · TRAINING · WESM</div>
+    <div class="app-sub" id="app-sub">EN → LIVE TRANSLATION · TRAINING · WESM</div>
     <div class="build" id="build">Build —</div>
   </div>
   <div class="spacer"></div>
@@ -283,22 +314,12 @@
   </div>
 </header>
 
-<main>
-  <section class="col" id="col-fr">
-    <div class="col-head"><span class="code">FR</span><span class="lang">Français</span></div>
-    <div class="feed" id="feed-fr">
-      <div class="empty-hint">La traduction apparaît ici.</div>
-      <div class="live-line" id="live-fr"></div>
-    </div>
-  </section>
-  <section class="col" id="col-es">
-    <div class="col-head"><span class="code">ES</span><span class="lang">Español</span></div>
-    <div class="feed" id="feed-es">
-      <div class="empty-hint">La traducción aparece aquí.</div>
-      <div class="live-line" id="live-es"></div>
-    </div>
-  </section>
-</main>
+<div id="lang-bar">
+  <span class="bar-label">Languages</span>
+  <!-- chips generated from the LANGUAGES array -->
+</div>
+
+<main id="cols"><!-- columns generated from the LANGUAGES array --></main>
 
 <section id="transcript">
   <div class="col-head"><span class="code">EN</span><span class="lang">What you said</span></div>
@@ -312,23 +333,117 @@
 
 <script>
 "use strict";
-const BUILD_VERSION = "2026-07-22.2";   /* format: YYYY-MM-DD.BUILD — bump every revision */
+const BUILD_VERSION = "2026-07-22.3";   /* format: YYYY-MM-DD.BUILD — bump every revision */
 document.getElementById("build").textContent = "Build " + BUILD_VERSION;
 
-/* Logo: expects conklin-logo.png beside this file. If it's missing, fall
-   back to a text wordmark so the header never shows a broken image.      */
-const logoImg = document.getElementById("logo-img");
-logoImg.onerror = ()=>{
-  logoImg.style.display = "none";
-  document.getElementById("logo-wordmark").style.display = "block";
-};
+/* =====================================================================
+   LANGUAGES — to add a language in the future, add ONE entry here.
+   code  = Google Translate language code (fr, es, sw, pt, de, ...)
+   tag   = short badge shown in the column header and chip
+   label = native-language name
+   color = the language's accent color in the UI
+   hint  = "translation appears here" in that language (shown when empty)
+   ===================================================================== */
+const LANGUAGES = [
+  { code:"fr", tag:"FR", label:"Français",  color:"#7FB4E8", hint:"La traduction apparaît ici." },
+  { code:"es", tag:"ES", label:"Español",   color:"#E8A25C", hint:"La traducción aparece aquí." },
+  { code:"sw", tag:"SW", label:"Kiswahili", color:"#B48EDC", hint:"Tafsiri itaonekana hapa." }
+];
 
 const $ = id => document.getElementById(id);
 const statusEl=$("status"), toggleBtn=$("toggle"), caption=$("caption"),
-      micdot=$("micdot"), feedFR=$("feed-fr"), feedES=$("feed-es"),
-      feedEN=$("feed-en"), liveFR=$("live-fr"), liveES=$("live-es");
+      micdot=$("micdot"), feedEN=$("feed-en"), colsEl=$("cols"), langBar=$("lang-bar");
 
 let running=false, recognition=null, restartTimer=null;
+
+/* ---------- language selection (persists per device) ---------- */
+let active = new Set(LANGUAGES.map(l=>l.code));   // default: all on
+try{
+  const saved = JSON.parse(localStorage.getItem("clt_langs"));
+  if(Array.isArray(saved)){
+    const valid = saved.filter(c=>LANGUAGES.some(l=>l.code===c));
+    if(valid.length) active = new Set(valid);
+  }
+}catch(e){}
+
+const ui = {};   // per-language refs: ui[code] = {col, feed, live, chip}
+
+function buildLanguageUI(){
+  LANGUAGES.forEach(lang=>{
+    /* chip */
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = lang.tag + " " + lang.label;
+    chip.style.setProperty("--chip", lang.color);
+    chip.setAttribute("aria-pressed", "false");
+    chip.onclick = ()=>toggleLang(lang.code);
+    langBar.appendChild(chip);
+
+    /* column */
+    const col = document.createElement("section");
+    col.className = "col";
+    col.style.setProperty("--accent", lang.color);
+
+    const head = document.createElement("div");
+    head.className = "col-head";
+    const code = document.createElement("span");
+    code.className = "code"; code.textContent = lang.tag;
+    const label = document.createElement("span");
+    label.className = "lang"; label.textContent = lang.label;
+    head.appendChild(code); head.appendChild(label);
+
+    const feed = document.createElement("div");
+    feed.className = "feed";
+    const hint = document.createElement("div");
+    hint.className = "empty-hint"; hint.textContent = lang.hint;
+    const live = document.createElement("div");
+    live.className = "live-line";
+    feed.appendChild(hint); feed.appendChild(live);
+
+    col.appendChild(head); col.appendChild(feed);
+    colsEl.appendChild(col);
+
+    ui[lang.code] = { col, feed, live, chip };
+  });
+  applySelection();
+}
+
+function toggleLang(code){
+  if(active.has(code)){
+    if(active.size === 1) return;      // keep at least one language on
+    active.delete(code);
+  }else{
+    active.add(code);
+  }
+  try{ localStorage.setItem("clt_langs", JSON.stringify([...active])); }catch(e){}
+  applySelection();
+}
+
+function applySelection(){
+  LANGUAGES.forEach(lang=>{
+    const on = active.has(lang.code);
+    ui[lang.code].col.classList.toggle("hidden", !on);
+    ui[lang.code].chip.classList.toggle("on", on);
+    ui[lang.code].chip.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const n = active.size;
+  document.documentElement.style.setProperty("--lang-count", n);
+  /* more languages on screen -> smaller base text so columns stay readable */
+  const countScale = n <= 1 ? 1.15 : n === 2 ? 1 : n === 3 ? 0.85 : n === 4 ? 0.75 : 0.68;
+  document.documentElement.style.setProperty("--count-scale", countScale);
+  /* subtitle reflects the current selection, generator-style */
+  const parts = LANGUAGES.filter(l=>active.has(l.code)).map(l=>l.label.toUpperCase());
+  $("app-sub").textContent = "EN → " + parts.join(" + ") + " · TRAINING · WESM";
+}
+
+const activeLangs = ()=>LANGUAGES.filter(l=>active.has(l.code));
+
+/* ---------- logo fallback ---------- */
+const logoImg = $("logo-img");
+logoImg.onerror = ()=>{
+  logoImg.style.display = "none";
+  $("logo-wordmark").style.display = "block";
+};
 
 /* ---------- text scale (multiplier on the fluid base size) ---------- */
 let phraseScale = 1;
@@ -343,8 +458,9 @@ $("bigger").onclick = ()=>{ phraseScale += 0.12; applyScale(); };
 $("smaller").onclick = ()=>{ phraseScale -= 0.12; applyScale(); };
 
 $("clear").onclick = ()=>{
-  [feedFR, feedES, feedEN].forEach(f=>f.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove()));
-  liveFR.textContent=""; liveES.textContent="";
+  const feeds = [feedEN, ...LANGUAGES.map(l=>ui[l.code].feed)];
+  feeds.forEach(f=>f.querySelectorAll(".phrase,.empty-hint").forEach(n=>n.remove()));
+  LANGUAGES.forEach(l=>{ ui[l.code].live.textContent = ""; });
   caption.textContent = running ? "Listening…" : "Tap Start, then speak in English.";
   caption.classList.remove("talking");
 };
@@ -353,7 +469,7 @@ $("clear").onclick = ()=>{
    Primary: Google's public gtx endpoint (no key). Unofficial — if it ever
    stops working, finalized phrases fall back to MyMemory automatically.
    The rolling live line uses the Google endpoint only (the fallback is
-   too slow / rate-limited for 2-3 requests per second).                  */
+   too slow / rate-limited for several requests per second).              */
 async function translateGoogle(text, target){
   const u = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl="
           + target + "&dt=t&q=" + encodeURIComponent(text);
@@ -395,7 +511,8 @@ function addPhrase(feed, liveEl, text, cls){
 /* ---------- rolling live translation ---------- */
 const LIVE_THROTTLE_MS = 400;
 let liveGen = 0;
-let liveSeq = { fr:0, es:0 };
+const liveSeq = {};
+LANGUAGES.forEach(l=>liveSeq[l.code]=0);
 let liveTimer = null;
 let latestInterim = "";
 let lastSentInterim = "";
@@ -414,15 +531,14 @@ function scheduleLive(text){
 
 function fireLive(text){
   const gen = liveGen;
-  ["fr","es"].forEach(lang=>{
-    const seq = ++liveSeq[lang];
-    translateGoogle(text, lang).then(res=>{
-      if(gen !== liveGen || seq !== liveSeq[lang] || !res) return; // stale — drop
-      const el = (lang==="fr") ? liveFR : liveES;
-      const feed = (lang==="fr") ? feedFR : feedES;
+  activeLangs().forEach(lang=>{
+    const seq = ++liveSeq[lang.code];
+    translateGoogle(text, lang.code).then(res=>{
+      if(gen !== liveGen || seq !== liveSeq[lang.code] || !res) return; // stale — drop
+      const {feed, live} = ui[lang.code];
       const hint = feed.querySelector(".empty-hint");
       if(hint) hint.remove();
-      el.textContent = res;
+      live.textContent = res;
       feed.scrollTop = feed.scrollHeight;
     }).catch(()=>{});  // live line just skips a beat on failure
   });
@@ -432,7 +548,7 @@ function clearLive(){
   liveGen++;                     // invalidate all in-flight live requests
   clearTimeout(liveTimer); liveTimer = null;
   latestInterim = ""; lastSentInterim = "";
-  liveFR.textContent = ""; liveES.textContent = "";
+  LANGUAGES.forEach(l=>{ ui[l.code].live.textContent = ""; });
 }
 
 /* ---------- finalized phrases ---------- */
@@ -441,11 +557,10 @@ async function handleFinal(text){
   if(!text) return;
   clearLive();
   addPhrase(feedEN, null, text);              // English transcript — the record of what was said
-  const pFR = addPhrase(feedFR, liveFR, "…");
-  const pES = addPhrase(feedES, liveES, "…");
-  const [fr, es] = await Promise.all([translateFinal(text,"fr"), translateFinal(text,"es")]);
-  fillPhrase(pFR, fr, feedFR);
-  fillPhrase(pES, es, feedES);
+  const langs = activeLangs();
+  const pending = langs.map(lang=>addPhrase(ui[lang.code].feed, ui[lang.code].live, "…"));
+  const results = await Promise.all(langs.map(lang=>translateFinal(text, lang.code)));
+  langs.forEach((lang, i)=>fillPhrase(pending[i], results[i], ui[lang.code].feed));
 }
 function fillPhrase(el, result, feed){
   if(result){ el.textContent = result; }
@@ -528,6 +643,8 @@ function stopAll(){
 }
 
 /* ---------- browser support guidance ---------- */
+buildLanguageUI();
+
 if(!SR){
   toggleBtn.disabled = true;
   setStatus("Not supported", "err");
